@@ -41,6 +41,15 @@ export default function Login() {
               Política de Privacidade
             </a>
           </div>
+          
+          <div className="mt-4 text-center">
+            <a
+              href="/admin-login"
+              className="text-sm text-primary-600 dark:text-primary-400 hover:underline"
+            >
+              Acesso administrativo
+            </a>
+          </div>
         </CardContent>
       </Card>
     </div>

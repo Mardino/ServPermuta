@@ -13,6 +13,7 @@ import Messages from "@/pages/messages";
 import Settings from "@/pages/settings";
 import Login from "@/pages/login";
 import AdminLogin from "@/pages/admin-login";
+import AdminSettings from "@/pages/admin-settings";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -112,6 +113,11 @@ function Router() {
           <Route path="/settings">
             <Layout>
               <Settings />
+            </Layout>
+          </Route>
+          <Route path="/admin-settings">
+            <Layout>
+              <AdminSettings />
             </Layout>
           </Route>
         </>

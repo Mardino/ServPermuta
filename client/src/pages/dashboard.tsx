@@ -12,7 +12,7 @@ interface DashboardStats {
   totalUsers: number;
   activePermutas: number;
   completedPermutas: number;
-  institutions: number;
+  sectors: number;
 }
 
 export default function Dashboard() {
