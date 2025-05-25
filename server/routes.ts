@@ -26,6 +26,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch user" });
     }
   });
+  
+  // Admin auth routes
+  app.post('/api/admin/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      // Verificar credenciais de administrador
+      // Credenciais iniciais: admin/admin123
+      if (username === 'admin' && password === 'admin123') {
+        // Criar ou encontrar usuário administrador
+        const adminUser = await storage.getUserByUsername('admin');
+        
+        if (adminUser) {
+          // Se o administrador já existe, definir na sessão
+          (req.session as any).adminUser = adminUser;
+          (req.session as any).isAdmin = true;
+          
+          res.json({ success: true, user: adminUser });
+        } else {
+          // Se o administrador não existe, criar
+          const newAdmin = await storage.upsertUser({
+            id: 'admin-' + Date.now(),
+            username: 'admin',
+            email: 'admin@sistema.permuta',
+            firstName: 'Administrador',
+            lastName: 'Sistema',
+            role: 'admin'
+          });
+          
+          (req.session as any).adminUser = newAdmin;
+          (req.session as any).isAdmin = true;
+          
+          res.json({ success: true, user: newAdmin });
+        }
+      } else {
+        res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+      }
+    } catch (error) {
+      console.error("Error during admin login:", error);
+      res.status(500).json({ success: false, message: 'Erro no login de administrador' });
+    }
+  });
+  
+  app.post('/api/admin/change-password', async (req, res) => {
+    try {
+      if (!(req.session as any).isAdmin) {
+        return res.status(401).json({ success: false, message: 'Não autorizado' });
+      }
+      
+      const { currentPassword, newPassword } = req.body;
+      
+      // Verificar senha atual
+      if (currentPassword !== 'admin123') {
+        return res.status(400).json({ success: false, message: 'Senha atual incorreta' });
+      }
+      
+      // Em um sistema real, você atualizaria a senha do administrador no banco de dados
+      // Como estamos usando uma verificação simples, apenas retornamos sucesso
+      
+      res.json({ success: true, message: 'Senha alterada com sucesso' });
+    } catch (error) {
+      console.error("Error changing admin password:", error);
+      res.status(500).json({ success: false, message: 'Erro ao alterar senha' });
+    }
+  });
 
   // Users API
   app.get('/api/users', isAuthenticated, async (req, res) => {

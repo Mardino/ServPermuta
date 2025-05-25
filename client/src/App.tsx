@@ -8,10 +8,11 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Users from "@/pages/users";
 import Permutas from "@/pages/permutas";
-import Institutions from "@/pages/institutions";
+import Sectors from "@/pages/sectors";
 import Messages from "@/pages/messages";
 import Settings from "@/pages/settings";
 import Login from "@/pages/login";
+import AdminLogin from "@/pages/admin-login";
 import NotFound from "@/pages/not-found";
 import Sidebar from "@/components/layout/Sidebar";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -77,7 +78,10 @@ function Router() {
   return (
     <Switch>
       {!isAuthenticated ? (
-        <Route path="/" component={Login} />
+        <>
+          <Route path="/" component={Login} />
+          <Route path="/admin-login" component={AdminLogin} />
+        </>
       ) : (
         <>
           <Route path="/">
@@ -95,9 +99,9 @@ function Router() {
               <Permutas />
             </Layout>
           </Route>
-          <Route path="/institutions">
+          <Route path="/sectors">
             <Layout>
-              <Institutions />
+              <Sectors />
             </Layout>
           </Route>
           <Route path="/messages">
