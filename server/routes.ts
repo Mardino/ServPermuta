@@ -1,0 +1,326 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { json, urlencoded } from "express";
+import { z } from "zod";
+import { 
+  insertInstitutionSchema, 
+  insertPermutaSchema,
+  insertMessageSchema,
+  insertActivitySchema
+} from "@shared/schema";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Users API
+  app.get('/api/users', isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getUsers();
+      res.json(users);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.put('/api/users/:id/role', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role } = req.body;
+
+      if (!role || typeof role !== 'string') {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const updatedUser = await storage.updateUserRole(id, role);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      res.json(updatedUser);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update user role" });
+    }
+  });
+
+  // Institutions API
+  app.get('/api/institutions', async (req, res) => {
+    try {
+      const institutions = await storage.getInstitutions();
+      res.json(institutions);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch institutions" });
+    }
+  });
+
+  app.get('/api/institutions/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const institution = await storage.getInstitution(Number(id));
+      
+      if (!institution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      res.json(institution);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch institution" });
+    }
+  });
+
+  app.post('/api/institutions', isAuthenticated, async (req, res) => {
+    try {
+      const validatedData = insertInstitutionSchema.parse(req.body);
+      const institution = await storage.createInstitution(validatedData);
+      
+      // Log activity
+      await storage.createActivity({
+        userId: (req as any).user.claims.sub,
+        institutionId: institution.id,
+        type: 'institution_created',
+        description: `Institution ${institution.name} was added to the platform`
+      });
+      
+      res.status(201).json(institution);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid institution data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create institution" });
+    }
+  });
+
+  app.put('/api/institutions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validatedData = insertInstitutionSchema.partial().parse(req.body);
+      
+      const updatedInstitution = await storage.updateInstitution(Number(id), validatedData);
+      if (!updatedInstitution) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      res.json(updatedInstitution);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid institution data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update institution" });
+    }
+  });
+
+  app.delete('/api/institutions/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deleteInstitution(Number(id));
+      
+      if (!success) {
+        return res.status(404).json({ message: "Institution not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete institution" });
+    }
+  });
+
+  // Permutas API
+  app.get('/api/permutas', async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const userId = req.query.userId as string | undefined;
+      
+      let permutas;
+      if (status) {
+        permutas = await storage.getPermutasByStatus(status);
+      } else if (userId) {
+        permutas = await storage.getPermutasByUser(userId);
+      } else {
+        permutas = await storage.getPermutas();
+      }
+      
+      res.json(permutas);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch permutas" });
+    }
+  });
+
+  app.get('/api/permutas/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const permuta = await storage.getPermuta(Number(id));
+      
+      if (!permuta) {
+        return res.status(404).json({ message: "Permuta not found" });
+      }
+      
+      res.json(permuta);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch permuta" });
+    }
+  });
+
+  app.post('/api/permutas', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const validatedData = insertPermutaSchema.parse({
+        ...req.body,
+        userId
+      });
+      
+      const permuta = await storage.createPermuta(validatedData);
+      
+      // Log activity
+      await storage.createActivity({
+        userId,
+        permutaId: permuta.id,
+        type: 'permuta_created',
+        description: `Permuta #${permuta.id} was created`
+      });
+      
+      res.status(201).json(permuta);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid permuta data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create permuta" });
+    }
+  });
+
+  app.put('/api/permutas/:id/status', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status || typeof status !== 'string') {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updatedPermuta = await storage.updatePermutaStatus(Number(id), status);
+      if (!updatedPermuta) {
+        return res.status(404).json({ message: "Permuta not found" });
+      }
+      
+      // Log activity
+      const activityType = status === 'completed' ? 'permuta_completed' : 
+                          status === 'cancelled' ? 'permuta_cancelled' : 
+                          `permuta_${status}`;
+      
+      await storage.createActivity({
+        userId: (req as any).user.claims.sub,
+        permutaId: updatedPermuta.id,
+        type: activityType,
+        description: `Permuta #${updatedPermuta.id} status changed to ${status}`
+      });
+      
+      res.json(updatedPermuta);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update permuta status" });
+    }
+  });
+
+  app.delete('/api/permutas/:id', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const success = await storage.deletePermuta(Number(id));
+      
+      if (!success) {
+        return res.status(404).json({ message: "Permuta not found" });
+      }
+      
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete permuta" });
+    }
+  });
+
+  // Messages API
+  app.get('/api/messages', isAuthenticated, async (req, res) => {
+    try {
+      const userId = (req as any).user.claims.sub;
+      const unreadOnly = req.query.unread === 'true';
+      
+      let messages;
+      if (unreadOnly) {
+        messages = await storage.getUnreadMessagesByUser(userId);
+      } else {
+        messages = await storage.getMessagesByUser(userId);
+      }
+      
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  app.post('/api/messages', isAuthenticated, async (req, res) => {
+    try {
+      const senderId = (req as any).user.claims.sub;
+      const validatedData = insertMessageSchema.parse({
+        ...req.body,
+        senderId
+      });
+      
+      const message = await storage.createMessage(validatedData);
+      res.status(201).json(message);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid message data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create message" });
+    }
+  });
+
+  app.put('/api/messages/:id/read', isAuthenticated, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updatedMessage = await storage.markMessageAsRead(Number(id));
+      
+      if (!updatedMessage) {
+        return res.status(404).json({ message: "Message not found" });
+      }
+      
+      res.json(updatedMessage);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to mark message as read" });
+    }
+  });
+
+  // Activities API
+  app.get('/api/activities', async (req, res) => {
+    try {
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const activities = await storage.getActivities(limit);
+      res.json(activities);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch activities" });
+    }
+  });
+
+  // Dashboard stats API
+  app.get('/api/dashboard/stats', isAuthenticated, async (req, res) => {
+    try {
+      const stats = await storage.getDashboardStats();
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}
