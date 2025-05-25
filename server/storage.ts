@@ -1,14 +1,14 @@
 import {
   users,
-  institutions,
+  sectors,
   permutas,
   messages,
   activities,
   permutaStatusEnum,
   type User,
   type UpsertUser,
-  type Institution,
-  type InsertInstitution,
+  type Sector,
+  type InsertSector,
   type Permuta,
   type InsertPermuta,
   type Message,
@@ -27,12 +27,12 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   updateUserRole(id: string, role: string): Promise<User | undefined>;
 
-  // Institution operations
-  getInstitution(id: number): Promise<Institution | undefined>;
-  getInstitutions(): Promise<Institution[]>;
-  createInstitution(institution: InsertInstitution): Promise<Institution>;
-  updateInstitution(id: number, institution: Partial<InsertInstitution>): Promise<Institution | undefined>;
-  deleteInstitution(id: number): Promise<boolean>;
+  // Sector operations
+  getSector(id: number): Promise<Sector | undefined>;
+  getSectors(): Promise<Sector[]>;
+  createSector(sector: InsertSector): Promise<Sector>;
+  updateSector(id: number, sector: Partial<InsertSector>): Promise<Sector | undefined>;
+  deleteSector(id: number): Promise<boolean>;
 
   // Permuta operations
   getPermuta(id: number): Promise<Permuta | undefined>;
@@ -94,41 +94,41 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  // Institution operations
-  async getInstitution(id: number): Promise<Institution | undefined> {
-    const [institution] = await db
+  // Sector operations
+  async getSector(id: number): Promise<Sector | undefined> {
+    const [sector] = await db
       .select()
-      .from(institutions)
-      .where(eq(institutions.id, id));
-    return institution;
+      .from(sectors)
+      .where(eq(sectors.id, id));
+    return sector;
   }
 
-  async getInstitutions(): Promise<Institution[]> {
-    return await db.select().from(institutions);
+  async getSectors(): Promise<Sector[]> {
+    return await db.select().from(sectors);
   }
 
-  async createInstitution(institution: InsertInstitution): Promise<Institution> {
-    const [newInstitution] = await db
-      .insert(institutions)
-      .values(institution)
+  async createSector(sector: InsertSector): Promise<Sector> {
+    const [newSector] = await db
+      .insert(sectors)
+      .values(sector)
       .returning();
-    return newInstitution;
+    return newSector;
   }
 
-  async updateInstitution(id: number, institution: Partial<InsertInstitution>): Promise<Institution | undefined> {
-    const [updatedInstitution] = await db
-      .update(institutions)
-      .set({ ...institution, updatedAt: new Date() })
-      .where(eq(institutions.id, id))
+  async updateSector(id: number, sector: Partial<InsertSector>): Promise<Sector | undefined> {
+    const [updatedSector] = await db
+      .update(sectors)
+      .set({ ...sector, updatedAt: new Date() })
+      .where(eq(sectors.id, id))
       .returning();
-    return updatedInstitution;
+    return updatedSector;
   }
 
-  async deleteInstitution(id: number): Promise<boolean> {
+  async deleteSector(id: number): Promise<boolean> {
     const result = await db
-      .delete(institutions)
-      .where(eq(institutions.id, id))
-      .returning({ id: institutions.id });
+      .delete(sectors)
+      .where(eq(sectors.id, id))
+      .returning({ id: sectors.id });
     return result.length > 0;
   }
 
@@ -289,13 +289,13 @@ export class DatabaseStorage implements IStorage {
       .from(permutas)
       .where(eq(permutas.status, 'completed'));
     
-    const totalInstitutions = await db.select({ count: sql`count(*)` }).from(institutions);
+    const totalSectors = await db.select({ count: sql`count(*)` }).from(sectors);
     
     return {
       totalUsers: Number(totalUsers[0].count),
       activePermutas: Number(activePermutas[0].count),
       completedPermutas: Number(completedPermutas[0].count),
-      institutions: Number(totalInstitutions[0].count)
+      sectors: Number(totalSectors[0].count)
     };
   }
 }

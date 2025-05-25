@@ -42,27 +42,23 @@ export const users = pgTable("users", {
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
-// Institutions table
-export const institutions = pgTable("institutions", {
+// Sectors table
+export const sectors = pgTable("sectors", {
   id: serial("id").primaryKey(),
   name: varchar("name").notNull(),
-  address: varchar("address"),
-  city: varchar("city"),
-  zipCode: varchar("zip_code"),
-  phone: varchar("phone"),
-  email: varchar("email"),
+  description: varchar("description"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const insertInstitutionSchema = createInsertSchema(institutions).omit({ 
+export const insertSectorSchema = createInsertSchema(sectors).omit({ 
   id: true,
   createdAt: true,
   updatedAt: true
 });
 
-export type InsertInstitution = z.infer<typeof insertInstitutionSchema>;
-export type Institution = typeof institutions.$inferSelect;
+export type InsertSector = z.infer<typeof insertSectorSchema>;
+export type Sector = typeof sectors.$inferSelect;
 
 // Permuta status enum
 export const permutaStatusEnum = pgEnum('permuta_status', [
@@ -78,8 +74,8 @@ export const permutaStatusEnum = pgEnum('permuta_status', [
 export const permutas = pgTable("permutas", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").notNull().references(() => users.id),
-  fromInstitutionId: integer("from_institution_id").notNull().references(() => institutions.id),
-  toInstitutionId: integer("to_institution_id").notNull().references(() => institutions.id),
+  fromSectorId: integer("from_sector_id").notNull().references(() => sectors.id),
+  toSectorId: integer("to_sector_id").notNull().references(() => sectors.id),
   status: permutaStatusEnum("status").notNull().default('pending'),
   description: text("description"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -120,7 +116,7 @@ export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
   userId: varchar("user_id").references(() => users.id),
   permutaId: integer("permuta_id").references(() => permutas.id),
-  institutionId: integer("institution_id").references(() => institutions.id),
+  sectorId: integer("sector_id").references(() => sectors.id),
   type: varchar("type").notNull(),
   description: text("description").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
