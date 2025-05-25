@@ -5,7 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { json, urlencoded } from "express";
 import { z } from "zod";
 import { 
-  insertInstitutionSchema, 
+  insertSectorSchema, 
   insertPermutaSchema,
   insertMessageSchema,
   insertActivitySchema
@@ -57,84 +57,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Institutions API
-  app.get('/api/institutions', async (req, res) => {
+  // Sectors API
+  app.get('/api/sectors', async (req, res) => {
     try {
-      const institutions = await storage.getInstitutions();
-      res.json(institutions);
+      const sectors = await storage.getSectors();
+      res.json(sectors);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch institutions" });
+      res.status(500).json({ message: "Failed to fetch sectors" });
     }
   });
 
-  app.get('/api/institutions/:id', async (req, res) => {
+  app.get('/api/sectors/:id', async (req, res) => {
     try {
       const { id } = req.params;
-      const institution = await storage.getInstitution(Number(id));
+      const sector = await storage.getSector(Number(id));
       
-      if (!institution) {
-        return res.status(404).json({ message: "Institution not found" });
+      if (!sector) {
+        return res.status(404).json({ message: "Sector not found" });
       }
       
-      res.json(institution);
+      res.json(sector);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch institution" });
+      res.status(500).json({ message: "Failed to fetch sector" });
     }
   });
 
-  app.post('/api/institutions', isAuthenticated, async (req, res) => {
+  app.post('/api/sectors', isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertInstitutionSchema.parse(req.body);
-      const institution = await storage.createInstitution(validatedData);
+      const validatedData = insertSectorSchema.parse(req.body);
+      const sector = await storage.createSector(validatedData);
       
       // Log activity
       await storage.createActivity({
         userId: (req as any).user.claims.sub,
-        institutionId: institution.id,
-        type: 'institution_created',
-        description: `Institution ${institution.name} was added to the platform`
+        sectorId: sector.id,
+        type: 'sector_created',
+        description: `Sector ${sector.name} was added to the platform`
       });
       
-      res.status(201).json(institution);
+      res.status(201).json(sector);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid institution data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid sector data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to create institution" });
+      res.status(500).json({ message: "Failed to create sector" });
     }
   });
 
-  app.put('/api/institutions/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/sectors/:id', isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const validatedData = insertInstitutionSchema.partial().parse(req.body);
+      const validatedData = insertSectorSchema.partial().parse(req.body);
       
-      const updatedInstitution = await storage.updateInstitution(Number(id), validatedData);
-      if (!updatedInstitution) {
-        return res.status(404).json({ message: "Institution not found" });
+      const updatedSector = await storage.updateSector(Number(id), validatedData);
+      if (!updatedSector) {
+        return res.status(404).json({ message: "Sector not found" });
       }
       
-      res.json(updatedInstitution);
+      res.json(updatedSector);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid institution data", errors: error.errors });
+        return res.status(400).json({ message: "Invalid sector data", errors: error.errors });
       }
-      res.status(500).json({ message: "Failed to update institution" });
+      res.status(500).json({ message: "Failed to update sector" });
     }
   });
 
-  app.delete('/api/institutions/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/sectors/:id', isAuthenticated, async (req, res) => {
     try {
       const { id } = req.params;
-      const success = await storage.deleteInstitution(Number(id));
+      const success = await storage.deleteSector(Number(id));
       
       if (!success) {
-        return res.status(404).json({ message: "Institution not found" });
+        return res.status(404).json({ message: "Sector not found" });
       }
       
       res.status(204).end();
     } catch (error) {
-      res.status(500).json({ message: "Failed to delete institution" });
+      res.status(500).json({ message: "Failed to delete sector" });
     }
   });
 
