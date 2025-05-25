@@ -41,12 +41,19 @@ export default function AdminLogin() {
   const onSubmit = async (values: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const response = await apiRequest("/api/admin/login", {
+      console.log("Attempting admin login with:", values.username);
+      
+      const response = await fetch("/api/admin/login", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(values),
       });
-
-      if (response.success) {
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
         toast({
           title: "Login bem-sucedido",
           description: "Bem-vindo ao painel administrativo",
@@ -55,14 +62,15 @@ export default function AdminLogin() {
       } else {
         toast({
           title: "Erro ao fazer login",
-          description: response.message || "Credenciais inválidas",
+          description: data.message || "Credenciais inválidas",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error("Admin login error:", error);
       toast({
         title: "Erro ao fazer login",
-        description: "Credenciais inválidas",
+        description: "Ocorreu um erro ao tentar fazer login",
         variant: "destructive",
       });
     } finally {

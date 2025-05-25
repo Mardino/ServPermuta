@@ -32,21 +32,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
+      console.log("Admin login attempt:", { username, password });
+      
       // Verificar credenciais de administrador
       // Credenciais iniciais: admin/admin123
       if (username === 'admin' && password === 'admin123') {
-        // Criar ou encontrar usuário administrador
-        const adminUser = await storage.getUserByUsername('admin');
+        console.log("Admin credentials verified successfully");
         
-        if (adminUser) {
-          // Se o administrador já existe, definir na sessão
-          (req.session as any).adminUser = adminUser;
-          (req.session as any).isAdmin = true;
-          
-          res.json({ success: true, user: adminUser });
-        } else {
+        // Criar ou encontrar usuário administrador
+        let adminUser = await storage.getUserByUsername('admin');
+        
+        if (!adminUser) {
+          console.log("Creating new admin user");
           // Se o administrador não existe, criar
-          const newAdmin = await storage.upsertUser({
+          adminUser = await storage.upsertUser({
             id: 'admin-' + Date.now(),
             username: 'admin',
             email: 'admin@sistema.permuta',
@@ -54,18 +53,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
             lastName: 'Sistema',
             role: 'admin'
           });
-          
-          (req.session as any).adminUser = newAdmin;
-          (req.session as any).isAdmin = true;
-          
-          res.json({ success: true, user: newAdmin });
+        } else {
+          console.log("Admin user found:", adminUser);
         }
+        
+        // Definir na sessão
+        if (req.session) {
+          req.session.adminUser = adminUser;
+          req.session.isAdmin = true;
+        }
+        
+        console.log("Admin session set successfully");
+        return res.json({ success: true, user: adminUser });
       } else {
-        res.status(401).json({ success: false, message: 'Credenciais inválidas' });
+        console.log("Invalid admin credentials");
+        return res.status(401).json({ success: false, message: 'Credenciais inválidas' });
       }
     } catch (error) {
       console.error("Error during admin login:", error);
-      res.status(500).json({ success: false, message: 'Erro no login de administrador' });
+      return res.status(500).json({ success: false, message: 'Erro no login de administrador' });
     }
   });
   
