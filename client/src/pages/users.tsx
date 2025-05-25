@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
@@ -72,7 +73,11 @@ export default function Users() {
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
-      const response = await apiRequest("PUT", `/api/users/${userId}/role`, { role });
+      const response = await fetch(`/api/users/${userId}/role`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role })
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -92,6 +97,67 @@ export default function Users() {
       });
     },
   });
+  
+  const promoteUserMutation = useMutation({
+    mutationFn: async ({ 
+      userId, 
+      accountType, 
+      duration 
+    }: { 
+      userId: string; 
+      accountType: string;
+      duration: string;
+    }) => {
+      const response = await fetch(`/api/users/${userId}/promote`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountType, duration })
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Usuário promovido",
+        description: `O usuário foi promovido para o plano ${getAccountTypeLabel(promotionDetails.accountType)}.`,
+      });
+      setIsPromoteDialogOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao promover o usuário.",
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const response = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" }
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      toast({
+        title: "Usuário excluído",
+        description: "O usuário foi excluído com sucesso.",
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao excluir o usuário.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleRoleChange = (userId: string, role: string) => {
     const user = users?.find((u) => u.id === userId);
@@ -100,12 +166,64 @@ export default function Users() {
     setIsRoleDialogOpen(true);
   };
 
+  const handlePromoteUser = (userId: string) => {
+    const user = users?.find((u) => u.id === userId);
+    setSelectedUser(user || null);
+    setPromotionDetails({
+      accountType: "free",
+      duration: "7"
+    });
+    setIsPromoteDialogOpen(true);
+  };
+
+  const handleDeleteUser = (userId: string) => {
+    const user = users?.find((u) => u.id === userId);
+    setSelectedUser(user || null);
+    setIsDeleteDialogOpen(true);
+  };
+
   const confirmRoleChange = () => {
     if (selectedUser && newRole) {
       updateRoleMutation.mutate({
         userId: selectedUser.id,
         role: newRole,
       });
+    }
+  };
+  
+  const confirmPromoteUser = () => {
+    if (selectedUser) {
+      promoteUserMutation.mutate({
+        userId: selectedUser.id,
+        accountType: promotionDetails.accountType,
+        duration: promotionDetails.duration
+      });
+    }
+  };
+  
+  const confirmDeleteUser = () => {
+    if (selectedUser) {
+      deleteUserMutation.mutate(selectedUser.id);
+    }
+  };
+  
+  const getAccountTypeLabel = (type: string) => {
+    switch (type) {
+      case "free": return "Free";
+      case "pro_i": return "Pro I";
+      case "pro_ii": return "Pro II";
+      case "premium": return "Premium";
+      default: return type;
+    }
+  };
+  
+  const getDurationLabel = (days: string) => {
+    switch (days) {
+      case "7": return "7 dias";
+      case "15": return "15 dias";
+      case "30": return "1 mês";
+      case "365": return "1 ano";
+      default: return `${days} dias`;
     }
   };
 
@@ -224,7 +342,12 @@ export default function Users() {
                               <DropdownMenuItem onClick={() => handleRoleChange(user.id, user.role)}>
                                 Alterar Função
                               </DropdownMenuItem>
-                              <DropdownMenuItem>Ver Detalhes</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handlePromoteUser(user.id)}>
+                                Promover Usuário
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-700">
+                                Excluir Usuário
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -244,6 +367,7 @@ export default function Users() {
         </CardContent>
       </Card>
 
+      {/* Diálogo para alterar função */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -269,6 +393,95 @@ export default function Users() {
             </Button>
             <Button onClick={confirmRoleChange} disabled={updateRoleMutation.isPending}>
               {updateRoleMutation.isPending ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo para promover usuário */}
+      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Promover Usuário</DialogTitle>
+            <DialogDescription>
+              Promova o usuário {selectedUser?.firstName} {selectedUser?.lastName} para um plano premium.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="account-type">Tipo de Conta</Label>
+              <Select 
+                value={promotionDetails.accountType} 
+                onValueChange={(value: any) => setPromotionDetails({...promotionDetails, accountType: value})}
+              >
+                <SelectTrigger id="account-type">
+                  <SelectValue placeholder="Selecionar tipo de conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="pro_i">Pro I</SelectItem>
+                  <SelectItem value="pro_ii">Pro II</SelectItem>
+                  <SelectItem value="premium">Premium</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duração</Label>
+              <Select 
+                value={promotionDetails.duration} 
+                onValueChange={(value: any) => setPromotionDetails({...promotionDetails, duration: value})}
+              >
+                <SelectTrigger id="duration">
+                  <SelectValue placeholder="Selecionar duração" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7">7 dias</SelectItem>
+                  <SelectItem value="15">15 dias</SelectItem>
+                  <SelectItem value="30">1 mês</SelectItem>
+                  <SelectItem value="365">1 ano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="pt-2">
+              <p className="text-sm font-medium">Resumo:</p>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                O usuário será promovido para o plano <strong>{getAccountTypeLabel(promotionDetails.accountType)}</strong> por <strong>{getDurationLabel(promotionDetails.duration)}</strong>.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmPromoteUser} disabled={promoteUserMutation.isPending}>
+              {promoteUserMutation.isPending ? "Promovendo..." : "Promover"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Diálogo para excluir usuário */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Usuário</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o usuário {selectedUser?.firstName} {selectedUser?.lastName}?
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmDeleteUser} 
+              disabled={deleteUserMutation.isPending}
+            >
+              {deleteUserMutation.isPending ? "Excluindo..." : "Excluir Permanentemente"}
             </Button>
           </DialogFooter>
         </DialogContent>
