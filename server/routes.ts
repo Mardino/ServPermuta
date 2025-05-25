@@ -47,20 +47,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Se o administrador não existe, criar
           adminUser = await storage.upsertUser({
             id: 'admin-' + Date.now(),
-            username: 'admin',
             email: 'admin@sistema.permuta',
             firstName: 'Administrador',
             lastName: 'Sistema',
             role: 'admin'
           });
+          
+          console.log("Admin user created:", adminUser);
         } else {
           console.log("Admin user found:", adminUser);
         }
         
-        // Definir na sessão
+        // Definir na sessão como usuário logado normal
         if (req.session) {
-          req.session.adminUser = adminUser;
-          req.session.isAdmin = true;
+          (req.session as any).user = {
+            claims: {
+              sub: adminUser.id,
+              email: adminUser.email,
+              first_name: adminUser.firstName,
+              last_name: adminUser.lastName
+            }
+          };
+          (req.session as any).isAdmin = true;
         }
         
         console.log("Admin session set successfully");
