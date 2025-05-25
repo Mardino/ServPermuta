@@ -48,6 +48,8 @@ interface User {
   lastName: string;
   profileImageUrl: string;
   role: string;
+  accountType?: 'free' | 'pro_i' | 'pro_ii' | 'premium';
+  accountExpiresAt?: string;
   createdAt: string;
 }
 
@@ -55,8 +57,14 @@ export default function Users() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [newRole, setNewRole] = useState<string>("");
+  const [promotionDetails, setPromotionDetails] = useState({
+    accountType: "free" as "free" | "pro_i" | "pro_ii" | "premium",
+    duration: "7" as "7" | "15" | "30" | "365"
+  });
 
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],

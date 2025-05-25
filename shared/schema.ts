@@ -26,6 +26,14 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Account type enum
+export const accountTypeEnum = pgEnum('account_type', [
+  'free',
+  'pro_i',
+  'pro_ii',
+  'premium'
+]);
+
 // User storage table.
 // This table is mandatory for Replit Auth, don't drop it.
 export const users = pgTable("users", {
@@ -36,6 +44,9 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   role: varchar("role").default("user"),
+  accountType: accountTypeEnum("account_type").default("free"),
+  accountExpiresAt: timestamp("account_expires_at"),
+  passwordHash: varchar("password_hash"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

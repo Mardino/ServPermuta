@@ -128,10 +128,78 @@ export default function Settings() {
               </div>
 
               <div className="space-y-4 pt-4 border-t border-neutral-200 dark:border-neutral-700">
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  A sua foto de perfil e informações são geridas através da sua conta de autenticação.
-                </p>
-                <Button variant="destructive" onClick={() => setIsLogoutDialogOpen(true)}>
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Alterar foto de perfil</h4>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-16 w-16">
+                        <AvatarImage
+                          src={user?.profileImageUrl}
+                          alt={`${user?.firstName} ${user?.lastName}`}
+                        />
+                        <AvatarFallback className="text-lg">
+                          {user?.firstName?.[0]}
+                          {user?.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="grid gap-2">
+                        <Button size="sm" variant="outline">
+                          Carregar foto
+                        </Button>
+                        <Button size="sm" variant="ghost">
+                          Remover foto
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Alterar senha</h4>
+                    <div className="grid gap-2">
+                      <div className="grid gap-1">
+                        <Label htmlFor="current-password">Senha atual</Label>
+                        <input
+                          id="current-password"
+                          type="password"
+                          className="w-full px-3 py-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="new-password">Nova senha</Label>
+                        <input
+                          id="new-password"
+                          type="password"
+                          className="w-full px-3 py-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
+                        />
+                      </div>
+                      <div className="grid gap-1">
+                        <Label htmlFor="confirm-password">Confirmar nova senha</Label>
+                        <input
+                          id="confirm-password"
+                          type="password"
+                          className="w-full px-3 py-2 border rounded-md dark:bg-neutral-800 dark:border-neutral-700"
+                        />
+                      </div>
+                      <Button className="mt-2" size="sm">
+                        Alterar senha
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <p className="text-sm font-medium">Tipo de conta</p>
+                        <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                          {user?.accountType || "Free"} 
+                          {user?.accountExpiresAt && ` (Expira em: ${new Date(user.accountExpiresAt).toLocaleDateString()})`}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <Button variant="destructive" onClick={() => setIsLogoutDialogOpen(true)} className="mt-4">
                   Terminar Sessão
                 </Button>
               </div>
