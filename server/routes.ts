@@ -39,24 +39,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (username === 'admin' && password === 'admin123') {
         console.log("Admin credentials verified successfully");
         
-        // Criar ou encontrar usuário administrador
-        let adminUser = await storage.getUserByUsername('admin');
+        // Criar objeto de usuário administrador diretamente sem verificar banco
+        const adminUser = {
+          id: 'admin-' + Date.now(),
+          email: 'admin@sistema.permuta',
+          firstName: 'Administrador',
+          lastName: 'Sistema',
+          role: 'admin'
+        };
         
-        if (!adminUser) {
-          console.log("Creating new admin user");
-          // Se o administrador não existe, criar
-          adminUser = await storage.upsertUser({
-            id: 'admin-' + Date.now(),
-            email: 'admin@sistema.permuta',
-            firstName: 'Administrador',
-            lastName: 'Sistema',
-            role: 'admin'
-          });
-          
-          console.log("Admin user created:", adminUser);
-        } else {
-          console.log("Admin user found:", adminUser);
-        }
+        console.log("Using admin user:", adminUser);
         
         // Definir na sessão como usuário logado normal
         if (req.session) {
